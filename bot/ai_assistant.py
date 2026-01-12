@@ -136,7 +136,11 @@ class AIAssistant:
                 text = re.sub(r'```json|```', '', res.text.strip())
                 return json.loads(text)
             except Exception as e:
+                error_msg = str(e)
+                # Mostrar solo el primer error con detalle para debug
+                if m == modelos[0]:
+                    print(f"      ⚠️ Error con {m}: {error_msg[:200]}")
                 continue
         
-        print("      ❌ Error: La IA no pudo generar respuesta. Saltando proyecto.")
+        print("      ❌ Error: La IA no pudo generar respuesta. Verifica GEMINI_KEY en .env")
         return None
