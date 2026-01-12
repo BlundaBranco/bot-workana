@@ -420,6 +420,31 @@ class WorkanaBot:
             self.human_scroll()
             time.sleep(random.uniform(*Config.DELAY_PAGE))
             
+            # Cerrar/aceptar banner de cookies si aparece
+            try:
+                # Intentar varios selectores comunes de banner de cookies
+                cookie_selectors = [
+                    "button.ot-sdk-button-primary",  # OneTrust (Workana usa esto)
+                    "button#onetrust-accept-btn-handler",
+                    "a.ot-close-icon",
+                    "button.cookie-accept",
+                    "button[aria-label*='Accept']",
+                    "button[aria-label*='Aceptar']"
+                ]
+                
+                for selector in cookie_selectors:
+                    try:
+                        cookie_btn = self.driver.find_element(By.CSS_SELECTOR, selector)
+                        if cookie_btn.is_displayed():
+                            print("      🍪 Cerrando banner de cookies...")
+                            self.human_click(cookie_btn)
+                            time.sleep(random.uniform(1, 2))
+                            break
+                    except:
+                        continue
+            except:
+                pass  # Si no hay banner, continuar normalmente
+            
             try:
                 bid_btn = self.wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#bid_button")))
                 
@@ -443,7 +468,15 @@ class WorkanaBot:
             # PRECIO
             try:
                 amount_in = self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#Amount")))
-                amount_in.click()
+                
+                # Intentar click normal primero
+                try:
+                    amount_in.click()
+                except:
+                    # Si falla (bloqueado por overlay), usar JavaScript
+                    print("      🔧 Click bloqueado, usando JavaScript...")
+                    self.driver.execute_script("arguments[0].click();", amount_in)
+                
                 time.sleep(random.uniform(*Config.DELAY_CLICK))
                 self.human_type(amount_in, str(price))
                 time.sleep(random.uniform(*Config.DELAY_CLICK))
