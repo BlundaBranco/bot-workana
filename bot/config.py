@@ -17,7 +17,10 @@ class Config:
     # Credenciales (desde archivo .env)
     WORKANA_EMAIL = os.getenv("WORKANA_EMAIL")
     WORKANA_PASS = os.getenv("WORKANA_PASS")
+    # IA: Soporta "gemini" u "openai"
+    AI_PROVIDER = os.getenv("AI_PROVIDER", "openai").lower()  # Por defecto OpenAI
     GEMINI_API_KEY = os.getenv("GEMINI_KEY")
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     
     # URLs de Workana
     BASE_URL = "https://www.workana.com"

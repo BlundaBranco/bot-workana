@@ -111,8 +111,13 @@ class WorkanaBot:
         except Exception as e:
             print(f"⚠️ No se pudieron inyectar scripts anti-detección: {e}")
         
+        
         self.wait = WebDriverWait(self.driver, 15)
-        self.ai = AIAssistant(Config.GEMINI_API_KEY)
+        self.ai = AIAssistant(
+            provider=Config.AI_PROVIDER,
+            gemini_key=Config.GEMINI_API_KEY,
+            openai_key=Config.OPENAI_API_KEY
+        )
         self.history = self.load_history()
 
     def load_history(self):

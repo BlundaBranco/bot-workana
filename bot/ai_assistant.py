@@ -1,7 +1,7 @@
 """
 Asistente de IA para análisis de proyectos y generación de propuestas.
 
-Este módulo maneja toda la interacción con la API de Gemini para:
+Este módulo maneja toda la interacción con la API de Gemini/OpenAI para:
 - Analizar proyectos y determinar si son viables
 - Generar propuestas personalizadas
 - Calcular precios y tiempos de entrega agresivos pero realistas
@@ -11,6 +11,7 @@ import time
 import json
 import re
 import google.generativeai as genai
+from openai import OpenAI
 
 
 class AIAssistant:
@@ -19,21 +20,36 @@ class AIAssistant:
     
     La IA sabe que eres un programador experto que usa las últimas IAs
     para generar código, permitiendo precios y tiempos agresivos.
+    
+    Soporta Gemini y OpenAI.
     """
     
-    def __init__(self, api_key):
+    def __init__(self, provider="openai", gemini_key=None, openai_key=None):
         """
         Inicializa el asistente de IA.
         
         Args:
-            api_key: Clave de API de Gemini
+            provider: "gemini" u "openai"
+            gemini_key: Clave de API de Gemini (si provider=gemini)
+            openai_key: Clave de API de OpenAI (si provider=openai)
             
         Raises:
-            ValueError: Si falta la API key
+            ValueError: Si falta la API key correspondiente
         """
-        if not api_key:
-            raise ValueError("❌ FALTA GEMINI_KEY")
-        genai.configure(api_key=api_key)
+        self.provider = provider.lower()
+        
+        if self.provider == "gemini":
+            if not gemini_key:
+                raise ValueError("❌ FALTA GEMINI_KEY")
+            genai.configure(api_key=gemini_key)
+            print(f"🤖 IA configurada: Gemini")
+        elif self.provider == "openai":
+            if not openai_key:
+                raise ValueError("❌ FALTA OPENAI_API_KEY")
+            self.client = OpenAI(api_key=openai_key)
+            print(f"🤖 IA configurada: OpenAI (GPT-4o-mini)")
+        else:
+            raise ValueError(f"❌ Proveedor desconocido: {provider}")
 
     def analyze_project(self, project_data):
         """
@@ -116,31 +132,57 @@ class AIAssistant:
         """
         
         # Lista de modelos a probar (de más rápido a más potente)
-        modelos = [
-            'models/gemini-2.5-flash-lite',
-            'models/gemini-2.0-flash-lite', 
-            'models/gemini-2.5-flash',
-            'models/gemini-2.0-flash',
-            'models/gemini-flash-latest',
-            'models/gemini-2.5-pro'
-        ]
-        
-        for m in modelos:
-            try:
-                model = genai.GenerativeModel(m)
-                time.sleep(1)  # Rate limiting
-                res = model.generate_content(prompt)
-                if not res.text:
+        if self.provider == "gemini":
+            modelos = [
+                'models/gemini-2.5-flash-lite',
+                'models/gemini-2.0-flash-lite', 
+                'models/gemini-2.5-flash',
+                'models/gemini-2.0-flash',
+                'models/gemini-flash-latest',
+                'models/gemini-2.5-pro'
+            ]
+            
+            for m in modelos:
+                try:
+                    model = genai.GenerativeModel(m)
+                    time.sleep(1)  # Rate limiting
+                    res = model.generate_content(prompt)
+                    if not res.text:
+                        continue
+                    # Limpiar formato JSON
+                    text = re.sub(r'```json|```', '', res.text.strip())
+                    return json.loads(text)
+                except Exception as e:
+                    error_msg = str(e)
+                    # Mostrar solo el primer error con detalle para debug
+                    if m == modelos[0]:
+                        print(f"      ⚠️ Error con {m}: {error_msg[:200]}")
                     continue
-                # Limpiar formato JSON
-                text = re.sub(r'```json|```', '', res.text.strip())
+            
+            print("      ❌ Error: La IA no pudo generar respuesta. Verifica GEMINI_KEY en .env")
+            return None
+            
+        elif self.provider == "openai":
+            # OpenAI: usar GPT-4o-mini (rápido y barato)
+            try:
+                response = self.client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "Eres un asistente que analiza proyectos freelance y devuelve SOLO JSON válido."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.7,
+                    response_format={"type": "json_object"}
+                )
+                
+                text = response.choices[0].message.content
+                # Limpiar formato JSON si es necesario
+                text = re.sub(r'```json|```', '', text.strip())
                 return json.loads(text)
+                
             except Exception as e:
                 error_msg = str(e)
-                # Mostrar solo el primer error con detalle para debug
-                if m == modelos[0]:
-                    print(f"      ⚠️ Error con {m}: {error_msg[:200]}")
-                continue
-        
-        print("      ❌ Error: La IA no pudo generar respuesta. Verifica GEMINI_KEY en .env")
-        return None
+                print(f"      ⚠️ Error con OpenAI: {error_msg[:200]}")
+                print("      ❌ Error: La IA no pudo generar respuesta. Verifica OPENAI_API_KEY en .env")
+                return None
+
