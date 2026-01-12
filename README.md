@@ -15,15 +15,15 @@ bot_workana/
 │   └── history_proposals.json   # Historial de propuestas
 │
 ├── docs/                   # Documentación
-│   ├── DEPLOY_VPS.md      # Guía completa de deployment
-│   ├── ESTRATEGIA.md      # Análisis de estrategia
-│   └── VPS_RECOMENDACIONES.md
+│   ├── ARCHIVOS.md        # Descripción de cada archivo
+│   └── ESTRATEGIA.md       # Análisis de estrategia
 │
 ├── main.py                 # Ejecución manual (una vez)
 ├── scheduler.py            # Ejecución programada (VPS)
 ├── test_auto.py            # Pruebas locales (modo auto)
 ├── setup_vps.sh           # Script de instalación VPS
 ├── requirements.txt        # Dependencias Python
+├── GUIA_VPS.md            # ⭐ Guía paso a paso para DigitalOcean
 └── .env                    # Credenciales (crear manualmente)
 ```
 

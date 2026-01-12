@@ -13,9 +13,12 @@ from bot import WorkanaBot
 # Horarios estratégicos para 52 propuestas/semana
 # 52 propuestas / 5 días = ~10-11 propuestas/día
 # 2 ejecuciones de 5-6 propuestas cada una = perfecto
+# ⚠️ IMPORTANTE: Estos horarios usan la ZONA HORARIA del VPS
+# Verifica con: timedatectl
+# Cambia con: sudo timedatectl set-timezone America/Argentina/Buenos_Aires
 HORARIOS_ESTRATEGICOS = [
-    "09:00",  # Mañana (clientes revisando proyectos)
-    "17:00",  # Tarde (máxima actividad)
+    "09:00",  # Mañana (clientes revisando proyectos) - Zona horaria del VPS
+    "17:00",  # Tarde (máxima actividad) - Zona horaria del VPS
 ]
 
 # Días de la semana (0=Lunes, 6=Domingo)
@@ -50,9 +53,16 @@ def configurar_horarios():
         schedule.every().thursday.at(hora).do(ejecutar_bot)
         schedule.every().friday.at(hora).do(ejecutar_bot)
     
+    # Obtener zona horaria actual
+    import subprocess
+    try:
+        timezone = subprocess.check_output(['timedatectl', 'show', '--property=Timezone', '--value']).decode().strip()
+    except:
+        timezone = "UTC (verificar con: timedatectl)"
+    
     print("📅 Horarios configurados:")
     for hora in HORARIOS_ESTRATEGICOS:
-        print(f"   - Lunes a Viernes a las {hora}")
+        print(f"   - Lunes a Viernes a las {hora} ({timezone})")
 
 
 def main():

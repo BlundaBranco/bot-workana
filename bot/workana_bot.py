@@ -73,8 +73,23 @@ class WorkanaBot:
             self.driver = uc.Chrome(options=options, version_main=None, use_subprocess=True)
         except Exception as e:
             print(f"⚠️ Error con configuración avanzada, intentando básica: {e}")
+            # Fallback: configuración mínima pero que funcione en VPS
             options = uc.ChromeOptions()
-            options.add_argument('--start-maximized')
+            
+            # Mantener headless si estaba activado
+            if Config.HEADLESS_MODE:
+                options.add_argument('--headless=new')
+                options.add_argument('--disable-gpu')
+                options.add_argument('--window-size=1920,1080')
+                print("   🖥️ Fallback en modo headless")
+            else:
+                options.add_argument('--start-maximized')
+            
+            # Opciones críticas para VPS
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            
             self.driver = uc.Chrome(options=options, version_main=None, use_subprocess=True)
         
         # 🎭 INYECTAR SCRIPTS ANTI-DETECCIÓN
@@ -176,27 +191,42 @@ class WorkanaBot:
             try:
                 print("🔑 Intentando cargar cookies guardadas...")
                 self.driver.get(Config.BASE_URL)
+                print("   📄 Página cargada, esperando...")
                 time.sleep(random.uniform(2, 3))
+                
+                print("   📂 Leyendo archivo de cookies...")
                 with open(Config.COOKIES_FILE, 'rb') as f:
                     cookies = pickle.load(f)
-                    for c in cookies:
-                        try:
-                            self.driver.add_cookie(c)
-                        except:
-                            pass
+                
+                print(f"   🍪 Cargando {len(cookies)} cookies...")
+                cookies_cargadas = 0
+                for c in cookies:
+                    try:
+                        self.driver.add_cookie(c)
+                        cookies_cargadas += 1
+                    except Exception as e:
+                        pass  # Algunas cookies pueden fallar, continuar
+                
+                print(f"   ✅ {cookies_cargadas}/{len(cookies)} cookies cargadas")
+                print("   🔄 Recargando página...")
                 self.driver.refresh()
                 time.sleep(random.uniform(4, 6))
                 
+                print("   🔍 Verificando si el login funcionó...")
                 # Verificar nuevamente si está logueado
                 page_source = self.driver.page_source.lower()
                 current_url = self.driver.current_url.lower()
+                
                 if "login" not in current_url and any(indicator in page_source for indicator in ["mi perfil", "dashboard", "propuestas"]):
                     print("✅ Login recuperado desde cookies.")
                     return
                 else:
                     print("⚠️ Las cookies no funcionaron o expiraron.")
+                    print(f"   URL actual: {current_url[:50]}...")
             except Exception as e:
                 print(f"⚠️ Error cargando cookies: {e}")
+                import traceback
+                traceback.print_exc()
         
         # Login manual
         print("⚠️ LOGIN MANUAL REQUERIDO.")
