@@ -9,38 +9,37 @@ import schedule
 import time
 from datetime import datetime
 from bot import WorkanaBot
+from bot.logger import logger
 
 # Horarios estratégicos para 52 propuestas/semana
 # 52 propuestas / 5 días = ~10-11 propuestas/día
 # 2 ejecuciones de 5-6 propuestas cada una = perfecto
 # ⚠️ IMPORTANTE: Estos horarios usan la ZONA HORARIA del VPS
 # Verifica con: timedatectl
-# Cambia con: sudo timedatectl set-timezone America/Argentina/Buenos_Aires
 HORARIOS_ESTRATEGICOS = [
-    "09:00",  # Mañana (clientes revisando proyectos) - Zona horaria del VPS
-    "17:00",  # Tarde (máxima actividad) - Zona horaria del VPS
+    "09:00",  # Mañana (clientes revisando proyectos)
+    "17:00",  # Tarde (máxima actividad)
 ]
 
 # Días de la semana (0=Lunes, 6=Domingo)
-# Ejecutar de lunes a viernes (días laborables)
 DIAS_ESTRATEGICOS = [0, 1, 2, 3, 4]  # Lunes a Viernes
 
 
 def ejecutar_bot():
     """Ejecuta el bot una vez."""
-    print(f"\n{'='*60}")
-    print(f"🚀 Iniciando bot - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"{'='*60}\n")
+    logger.info(f"{'='*30}")
+    logger.info(f"🚀 Iniciando ejecución programada")
+    logger.info(f"{'='*30}")
     
     try:
         bot = WorkanaBot()
         bot.run()
     except Exception as e:
-        print(f"❌ Error ejecutando bot: {e}")
+        logger.error(f"❌ Error ejecutando bot: {e}")
         import traceback
         traceback.print_exc()
     
-    print(f"\n✅ Ejecución completada - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    logger.info("✅ Ejecución completada")
 
 
 def configurar_horarios():
@@ -53,36 +52,37 @@ def configurar_horarios():
         schedule.every().thursday.at(hora).do(ejecutar_bot)
         schedule.every().friday.at(hora).do(ejecutar_bot)
     
-    # Obtener zona horaria actual
-    import subprocess
+    # Obtener zona horaria actual (compatible Windows/Linux)
     try:
-        timezone = subprocess.check_output(['timedatectl', 'show', '--property=Timezone', '--value']).decode().strip()
+        import subprocess
+        if hasattr(subprocess, 'check_output'):
+            # Intento genérico, fallará silenciosamente en Windows si no existe el comando
+            try:
+                timezone = subprocess.check_output(['timedatectl', 'show', '--property=Timezone', '--value'], stderr=subprocess.DEVNULL).decode().strip()
+            except:
+                timezone = time.tzname[0]
+        else:
+            timezone = time.tzname[0]
     except:
-        timezone = "UTC (verificar con: timedatectl)"
+        timezone = "Desconocida"
     
-    print("📅 Horarios configurados:")
+    logger.info("📅 Horarios configurados:")
     for hora in HORARIOS_ESTRATEGICOS:
-        print(f"   - Lunes a Viernes a las {hora} ({timezone})")
+        logger.info(f"   - Lunes a Viernes a las {hora} ({timezone})")
 
 
 def main():
     """Función principal del scheduler."""
-    print("="*60)
-    print("🤖 SCHEDULER DEL BOT DE WORKANA")
-    print("="*60)
-    print(f"⏰ Iniciado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"📊 Objetivo: 52 propuestas por semana")
-    print(f"📅 Ejecuciones: 2 veces al día (09:00 y 17:00)")
-    print(f"📈 Propuestas por ejecución: 5-6 (límite 7)")
-    print("="*60)
+    logger.info("="*60)
+    logger.info("🤖 SCHEDULER DEL BOT DE WORKANA - INICIADO")
+    logger.info("="*60)
+    logger.info(f"📊 Objetivo: 52 propuestas por semana")
+    logger.info(f"📅 Ejecuciones: 2 veces al día (09:00 y 17:00)")
     
     configurar_horarios()
     
-    print("\n✅ Scheduler activo. Esperando horarios programados...")
-    print("   Presiona Ctrl+C para detener.\n")
-    
-    # Ejecutar inmediatamente la primera vez (opcional)
-    # ejecutar_bot()
+    logger.info("✅ Scheduler activo. Esperando horarios programados...")
+    logger.info("   Logs disponibles en: logs/bot_execution.log")
     
     # Loop principal
     while True:
@@ -94,8 +94,6 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n👋 Scheduler detenido por el usuario.")
+        logger.info("👋 Scheduler detenido por el usuario.")
     except Exception as e:
-        print(f"\n❌ Error fatal: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.critical(f"❌ Error fatal en scheduler: {e}")
